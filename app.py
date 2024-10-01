@@ -1,7 +1,6 @@
 import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
-import seaborn as sns
 
 def tabela_cruzada(df, linha, coluna):
     tabela_cruzada = pd.crosstab(df[linha], df[coluna])
