@@ -43,33 +43,40 @@ if uploaded_file is not None:
     try:
         df = pd.read_csv(uploaded_file)
         st.write("Arquivo carregado com sucesso!")  # Mensagem de sucesso
+        st.write(df.head())
+
+        colunas = df.columns.tolist()
+
+        # Tabela Cruzada
+        coluna1, coluna2 = st.selectbox("Selecione as colunas para a tabela cruzada", options=colunas, index=(0, 1))
+        if st.button("Executar Tabela Cruzada"):
+            st.table(tabela_cruzada(df, coluna1, coluna2))
+
+        # Heatmap
+        coluna1, coluna2 = st.selectbox("Selecione as colunas para o heatmap", options=colunas, index=(0, 1))
+        if st.button("Executar Heatmap"):
+            try:
+                st.pyplot(heat_map(df, coluna1, coluna2))
+            except Exception as e:
+                st.error(f"Erro ao gerar o heatmap: {e}")
+
+        # Gráfico de Série Histórica
+        if 'Year' in df.columns:
+            ano_inicial, ano_final = st.select_slider("Selecione o período de anos", options=df['Year'].unique(), value=(df['Year'].min(), df['Year'].max()))
+            if st.button("Executar Gráfico de Série Histórica"):
+                try:
+                    st.pyplot(grafico_serie_historica(df, 'Year', ano_inicial, ano_final))
+                except Exception as e:
+                    st.error(f"Erro ao gerar o gráfico de série histórica: {e}")
+
+        # Gráfico de Dispersão
+        colunas_numericas = df.select_dtypes(include=['int64', 'float64']).columns.tolist()
+        coluna_x, coluna_y = st.selectbox("Selecione as colunas para o gráfico de dispersão", options=colunas_numericas, index=(0, 1))
+        if st.button("Executar Gráfico de Dispersão"):
+            try:
+                st.pyplot(grafico_dispersao(df, coluna_x, coluna_y))
+            except Exception as e:
+                st.error(f"Erro ao gerar o gráfico de dispersão: {e}")
+
     except Exception as e:
         st.error(f"Erro ao carregar o arquivo: {e}")  # Mensagem de erro
-
-    colunas = df.columns.tolist()
-    coluna1, coluna2 = st.selectbox("Selecione as colunas para a tabela cruzada", options=colunas, index=(0, 1))
-    if st.button("Executar Tabela Cruzada"):
-        st.table(tabela_cruzada(df, coluna1, coluna2))
-
-    coluna1, coluna2 = st.selectbox("Selecione as colunas para o heatmap", options=colunas, index=(0, 1))
-    if st.button("Executar Heatmap"):
-        try:
-            st.pyplot(heat_map(df, coluna1, coluna2))
-        except Exception as e:
-            st.error(f"Erro ao gerar o heatmap: {e}")
-
-    if 'Year' in df.columns:
-        ano_inicial, ano_final = st.select_slider("Selecione o período de anos", options=df['Year'].unique(), value=(df['Year'].min(), df['Year'].max()))
-        if st.button("Executar Grafico de Serie Historica"):
-            try:
-                st.pyplot(grafico_serie_historica(df, 'Year', ano_inicial, ano_final))
-            except Exception as e:
-                st.error(f"Erro ao gerar o gráfico de série histórica: {e}")
-
-    colunas_numericas = df.select_dtypes(include=['int64', 'float64']).columns.tolist()
-    coluna_x, coluna_y = st.selectbox("Selecione as colunas para o grafico de dispersão", options=colunas_numericas, index=(0, 1))
-    if st.button("Executar Grafico de Dispersão"):
-        try:
-            st.pyplot(grafico_dispersao(df, coluna_x, coluna_y))
-        except Exception as e:
-            st.error(f"Erro ao gerar o gráfico de dispersão: {e}")
