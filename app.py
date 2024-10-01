@@ -20,7 +20,8 @@ if uploaded_file is not None:
         coluna1 = st.selectbox("Selecione a coluna para a tabela cruzada (linha)", options=colunas)
         coluna2 = st.selectbox("Selecione a coluna para a tabela cruzada (coluna)", options=colunas)
         if st.button("Executar Tabela Cruzada"):
-            st.table(tabela_cruzada(df, coluna1, coluna2))
+            tabela_cruzada_resultado = tabela_cruzada(df, coluna1, coluna2)
+            st.dataframe(tabela_cruzada_resultado, height=300)  # Adiciona uma barra de rolamento para navegar dentro do csv
 
         # Gráfico de Série Histórica
         if 'Year' in df.columns:
