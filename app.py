@@ -17,7 +17,8 @@ if uploaded_file is not None:
         colunas = df.columns.tolist()
 
         # Tabela Cruzada
-        coluna1, coluna2 = st.selectbox("Selecione as colunas para a tabela cruzada", options=colunas, index=(0, 1))
+        coluna1 = st.selectbox("Selecione a coluna para a tabela cruzada (linha)", options=colunas)
+        coluna2 = st.selectbox("Selecione a coluna para a tabela cruzada (coluna)", options=colunas)
         if st.button("Executar Tabela Cruzada"):
             st.table(tabela_cruzada(df, coluna1, coluna2))
 
@@ -31,7 +32,8 @@ if uploaded_file is not None:
         # Gráfico de Dispersão
         colunas_numericas = df.select_dtypes(include=['int64', 'float64']).columns.tolist()
         if len(colunas_numericas) >= 2:
-            coluna_x, coluna_y = st.selectbox("Selecione as colunas para o gráfico de dispersão", options=colunas_numericas, index=(0, 1))
+            coluna_x = st.selectbox("Selecione a coluna para o gráfico de dispersão (eixo X)", options=colunas_numericas)
+            coluna_y = st.selectbox("Selecione a coluna para o gráfico de dispersão (eixo Y)", options=colunas_numericas)
             if st.button("Executar Gráfico de Dispersão"):
                 st.scatter_chart(df[[coluna_x, coluna_y]])
 
