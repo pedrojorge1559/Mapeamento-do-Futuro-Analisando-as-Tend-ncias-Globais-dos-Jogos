@@ -2,6 +2,8 @@ import streamlit as st
 import pandas as pd
 from back import tabela_cruzada
 from back import heat_map
+import seaborn as sns
+import matplotlib.pyplot as plt
 df = pd.read_csv('vgsales_com_clusters.csv')
 
 st.title("Tabela Cruzada")
