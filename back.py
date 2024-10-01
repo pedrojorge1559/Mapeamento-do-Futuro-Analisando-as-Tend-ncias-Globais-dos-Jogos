@@ -2,7 +2,6 @@ import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
 
-df = pd.read_csv('vgsales_com_clusters.csv')
 
 def tabela_cruzada(df, linha, coluna):
     tabela_cruzada = pd.crosstab(df[linha], df[coluna])
@@ -19,4 +18,24 @@ def heat_map(df, linha=None, coluna=None):
     plt.ylabel(coluna)
 
     return heatmap
+
+def grafico_serie_historica(df, coluna, ano_inicial, ano_final):
+    df_filtrado = df[(df[coluna] >= ano_inicial) & (df[coluna] <= ano_final)]
+    plt.figure(figsize=(10, 5))
+    plt.plot(df_filtrado['Year'], df_filtrado[coluna], marker='o')
+    plt.title('Gráfico de Série Histórica')
+    plt.xlabel('Ano')
+    plt.ylabel(coluna)
+    plt.grid()
+    return plt
+
+def grafico_dispersao(df, coluna_x, coluna_y):
+    plt.figure(figsize=(10, 5))
+    plt.scatter(df[coluna_x], df[coluna_y], alpha=0.7)
+    plt.title('Gráfico de Dispersão')
+    plt.xlabel(coluna_x)
+    plt.ylabel(coluna_y)
+    plt.grid()
+    return plt
+
 
