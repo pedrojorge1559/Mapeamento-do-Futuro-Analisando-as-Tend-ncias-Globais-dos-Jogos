@@ -60,7 +60,7 @@ st.title("Sistema de Tomada de Decisão para Jogos")
 st.header("Entrada de Dados")
 platform = st.selectbox("Plataforma", df['Platform'].unique())
 genre = st.selectbox("Gênero", df['Genre'].unique())
-publisher = st.text_input("Distribuidora")
+publisher = st.selectbox("Distribuidora", df['Publisher'].unique())
 
 # Treinar o modelo de Random Forest
 rf, scaler, X = treinar_random_forest()
