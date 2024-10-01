@@ -1,5 +1,6 @@
 import streamlit as st
 import pandas as pd
+import altair as alt
 
 def tabela_cruzada(df, linha, coluna):
     tabela_cruzada = pd.crosstab(df[linha], df[coluna])
@@ -20,8 +21,7 @@ if uploaded_file is not None:
         coluna1 = st.selectbox("Selecione a coluna para a tabela cruzada (linha)", options=colunas)
         coluna2 = st.selectbox("Selecione a coluna para a tabela cruzada (coluna)", options=colunas)
         if st.button("Executar Tabela Cruzada"):
-            tabela_cruzada_resultado = tabela_cruzada(df, coluna1, coluna2)
-            st.dataframe(tabela_cruzada_resultado, height=300)
+            st.table(tabela_cruzada(df, coluna1, coluna2))
 
         # Gráfico de Série Histórica
         if 'Year' in df.columns:
@@ -36,7 +36,13 @@ if uploaded_file is not None:
             coluna_x = st.selectbox("Selecione a coluna para o gráfico de dispersão (eixo X)", options=colunas_numericas)
             coluna_y = st.selectbox("Selecione a coluna para o gráfico de dispersão (eixo Y)", options=colunas_numericas)
             if st.button("Executar Gráfico de Dispersão"):
-                st.scatter_chart(df[[coluna_x, coluna_y]])
+                # Criar gráfico de dispersão usando Altair
+                chart = alt.Chart(df).mark_circle(size=60).encode(
+                    x=coluna_x,
+                    y=coluna_y,
+                    tooltip=[coluna_x, coluna_y]
+                ).interactive()
+                st.altair_chart(chart, use_container_width=True)
 
     except Exception as e:
         st.error(f"Erro ao carregar o arquivo: {e}")  # Mensagem de erro
