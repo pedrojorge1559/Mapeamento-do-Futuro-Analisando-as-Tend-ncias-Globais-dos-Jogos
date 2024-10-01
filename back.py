@@ -62,11 +62,12 @@ platform = st.selectbox("Plataforma", df['Platform'].unique())
 genre = st.selectbox("Gênero", df['Genre'].unique())
 publisher = st.selectbox("Distribuidora", df['Publisher'].unique())
 
-# Treinar o modelo de Random Forest
-rf, scaler, X = treinar_random_forest()
+# Botão para confirmar o envio das opções
+if st.button("Confirmar Envio"):
+    # Treinar o modelo de Random Forest
+    rf, scaler, X = treinar_random_forest()
 
-# Botão para prever vendas
-if st.button("Prever Vendas"):
+    # Prever vendas
     predicted_sales = prever_global_sales(rf, scaler, platform, genre, publisher)
     st.write(f"Vendas Previstas: {predicted_sales:.2f}")
 
@@ -84,27 +85,26 @@ if st.button("Prever Vendas"):
     ).properties(title='Vendas Previstas por Plataforma')
     st.altair_chart(chart)
 
-# Aplicar FP-Growth
-todas_regras = aplicar_fp_growth()
+    # Aplicar FP-Growth
+    todas_regras = aplicar_fp_growth()
 
-# Exibir regras de associação
-st.header("Regras de Associação")
-if st.button("Gerar Regras"):
+    # Exibir regras de associação
+    st.header("Regras de Associação")
     melhor_recomendacao = todas_regras.sort_values(by='lift', ascending=False).head(1)
     st.write(melhor_recomendacao)
 
-# Visualização da distribuição de vendas por gênero e plataforma
-st.header("Distribuição de Vendas por Gênero e Plataforma")
-df_vendas_distribuicao = df.groupby(['Genre', 'Platform'])['Global_Sales'].sum().reset_index()
-chart_distribuicao = alt.Chart(df_vendas_distribuicao).mark_bar().encode(
-    x='Platform',
-    y='Global_Sales',
-    color='Genre',
-    tooltip=['Genre', 'Global_Sales']
-).properties(title='Distribuição de Vendas por Gênero e Plataforma')
-st.altair_chart(chart_distribuicao)
+    # Visualização da distribuição de vendas por gênero e plataforma
+    st.header("Distribuição de Vendas por Gênero e Plataforma")
+    df_vendas_distribuicao = df.groupby(['Genre', 'Platform'])['Global_Sales'].sum().reset_index()
+    chart_distribuicao = alt.Chart(df_vendas_distribuicao).mark_bar().encode(
+        x='Platform',
+        y='Global_Sales',
+        color='Genre',
+        tooltip=['Genre', 'Global_Sales']
+    ).properties(title='Distribuição de Vendas por Gênero e Plataforma')
+    st.altair_chart(chart_distribuicao)
 
-# Exportar resultados
-if st.button("Exportar Resultados"):
-    todas_regras.to_csv('regras_associacao.csv', index=False)
-    st.success("Resultados exportados com sucesso!")
+    # Exportar resultados
+    if st.button("Exportar Resultados"):
+        todas_regras.to_csv('regras_associacao.csv', index=False)
+        st.success("Resultados exportados com sucesso!")
