@@ -25,6 +25,7 @@ if uploaded_file is not None:
 
         # Gráfico de Série Histórica
         if 'Year' in df.columns:
+            df['Year'] = df['Year'].astype(int)  # Convertendo a coluna 'Year' para inteiro
             ano_inicial, ano_final = st.select_slider("Selecione o período de anos", options=df['Year'].unique(), value=(df['Year'].min(), df['Year'].max()))
             df_filtrado = df[(df['Year'] >= ano_inicial) & (df['Year'] <= ano_final)]
             if st.button("Executar Gráfico de Série Histórica"):
