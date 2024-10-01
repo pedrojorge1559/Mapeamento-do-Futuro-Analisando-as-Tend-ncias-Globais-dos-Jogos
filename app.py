@@ -21,15 +21,14 @@ if uploaded_file is not None:
         coluna2 = st.selectbox("Selecione a coluna para a tabela cruzada (coluna)", options=colunas)
         if st.button("Executar Tabela Cruzada"):
             tabela_cruzada_resultado = tabela_cruzada(df, coluna1, coluna2)
-            st.dataframe(tabela_cruzada_resultado, height=300)  # Adiciona uma barra de rolamento para navegar dentro do csv
+            st.dataframe(tabela_cruzada_resultado, height=300)
 
         # Gráfico de Série Histórica
         if 'Year' in df.columns:
-            df['Year'] = df['Year'].astype(int)  # Convertendo a coluna 'Year' para inteiro
             ano_inicial, ano_final = st.select_slider("Selecione o período de anos", options=df['Year'].unique(), value=(df['Year'].min(), df['Year'].max()))
             df_filtrado = df[(df['Year'] >= ano_inicial) & (df['Year'] <= ano_final)]
             if st.button("Executar Gráfico de Série Histórica"):
-                st.line_chart(df_filtrado.set_index('Year')[colunas[0]])  # Altere colunas[0] para a coluna desejada
+                st.line_chart(df_filtrado.set_index('Year')[colunas[0]])
 
         # Gráfico de Dispersão
         colunas_numericas = df.select_dtypes(include=['int64', 'float64']).columns.tolist()
