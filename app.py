@@ -10,7 +10,7 @@ st.title("Mapeamento do Futuro Analisando as Tendências Globais dos Jogos")
 
 # Carregando o arquivo CSV
 df = pd.read_csv('vgsales_com_clusters.csv')
-st.write(f"Arquivo: {df.name} carregado com sucesso!")  # Mensagem de sucesso
+st.write(f"Arquivo carregado com sucesso!")  # Mensagem de sucesso
 st.write(df.head())
 
 colunas = df.columns.tolist()
