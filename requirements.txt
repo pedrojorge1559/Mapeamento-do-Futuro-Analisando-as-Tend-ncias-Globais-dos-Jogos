@@ -1,5 +1,0 @@
---upgrade pip
-pandas
-streamlit
-seaborn
-matplotlib.pyplot
