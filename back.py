@@ -1,12 +1,15 @@
+# app.py
+
 import streamlit as st
 import pandas as pd
-import plotly.express as px
 from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.metrics import mean_squared_error, r2_score, mean_absolute_error
 from sklearn.preprocessing import StandardScaler
 from mlxtend.frequent_patterns import fpgrowth, association_rules
+import altair as alt
 
+# Carregar os dados
 df = pd.read_csv('vgsales_com_clusters.csv')
 
 # Função para treinar o modelo de Random Forest
@@ -57,7 +60,7 @@ st.title("Sistema de Tomada de Decisão para Jogos")
 st.header("Entrada de Dados")
 platform = st.selectbox("Plataforma", df['Platform'].unique())
 genre = st.selectbox("Gênero", df['Genre'].unique())
-publisher = st.selectbox("Distribuidora", df['Publisher'].unique())
+publisher = st.text_input("Distribuidora")
 
 # Treinar o modelo de Random Forest
 rf, scaler, X = treinar_random_forest()
@@ -67,6 +70,20 @@ if st.button("Prever Vendas"):
     predicted_sales = prever_global_sales(rf, scaler, platform, genre, publisher)
     st.write(f"Vendas Previstas: {predicted_sales:.2f}")
 
+    # Visualização das vendas previstas
+    df_vendas = pd.DataFrame({
+        'Plataforma': [platform],
+        'Gênero': [genre],
+        'Distribuidora': [publisher],
+        'Vendas Previstas': [predicted_sales]
+    })
+    chart = alt.Chart(df_vendas).mark_bar().encode(
+        x='Plataforma',
+        y='Vendas Previstas',
+        color='Gênero'
+    ).properties(title='Vendas Previstas por Plataforma')
+    st.altair_chart(chart)
+
 # Aplicar FP-Growth
 todas_regras = aplicar_fp_growth()
 
@@ -75,6 +92,17 @@ st.header("Regras de Associação")
 if st.button("Gerar Regras"):
     melhor_recomendacao = todas_regras.sort_values(by='lift', ascending=False).head(1)
     st.write(melhor_recomendacao)
+
+# Visualização da distribuição de vendas por gênero e plataforma
+st.header("Distribuição de Vendas por Gênero e Plataforma")
+df_vendas_distribuicao = df.groupby(['Genre', 'Platform'])['Global_Sales'].sum().reset_index()
+chart_distribuicao = alt.Chart(df_vendas_distribuicao).mark_bar().encode(
+    x='Platform',
+    y='Global_Sales',
+    color='Genre',
+    tooltip=['Genre', 'Global_Sales']
+).properties(title='Distribuição de Vendas por Gênero e Plataforma')
+st.altair_chart(chart_distribuicao)
 
 # Exportar resultados
 if st.button("Exportar Resultados"):
