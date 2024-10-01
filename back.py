@@ -1,41 +1,82 @@
+import streamlit as st
 import pandas as pd
-import seaborn as sns
-import matplotlib.pyplot as plt
+import plotly.express as px
+from sklearn.model_selection import train_test_split
+from sklearn.ensemble import RandomForestRegressor
+from sklearn.metrics import mean_squared_error, r2_score, mean_absolute_error
+from sklearn.preprocessing import StandardScaler
+from mlxtend.frequent_patterns import fpgrowth, association_rules
 
+df = pd.read_csv('vgsales_com_clusters.csv')
 
-def tabela_cruzada(df, linha, coluna):
-    tabela_cruzada = pd.crosstab(df[linha], df[coluna])
-    return tabela_cruzada
+# Função para treinar o modelo de Random Forest
+def treinar_random_forest():
+    df_encoded = pd.get_dummies(df[['Platform', 'Genre', 'Publisher', 'Global_Sales']], drop_first=True)
+    X = df_encoded.drop('Global_Sales', axis=1)
+    y = df_encoded['Global_Sales']
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+    
+    scaler = StandardScaler()
+    X_train_scaled = scaler.fit_transform(X_train)
+    X_test_scaled = scaler.transform(X_test)
+    
+    rf = RandomForestRegressor(n_estimators=100, random_state=42)
+    rf.fit(X_train_scaled, y_train)
+    
+    return rf, scaler, X
 
-def heat_map(df, linha=None, coluna=None):
-    if linha is not None and coluna is not None:
-        df = df.pivot_table(index=linha, columns=coluna, aggfunc='size', fill_value=0)
+# Função para prever vendas globais
+def prever_global_sales(rf, scaler, platform, genre, publisher):
+    input_data = pd.DataFrame({'Platform': [platform], 'Genre': [genre], 'Publisher': [publisher]})
+    input_data_encoded = pd.get_dummies(input_data, columns=['Platform', 'Genre', 'Publisher'], drop_first=True)
+    input_data_encoded = input_data_encoded.reindex(columns=X.columns, fill_value=0)
+    input_data_scaled = scaler.transform(input_data_encoded)
+    predicted_sales = rf.predict(input_data_scaled)
+    return predicted_sales[0]
 
-    heatmap = sns.heatmap(df, annot=True, fmt='g', cmap='PuRd', annot_kws={'color': 'black'}, linewidths=1)
+# Função para aplicar FP-Growth
+def aplicar_fp_growth():
+    clusters = df['Cluster'].unique()
+    todas_regras = pd.DataFrame()
+    
+    for cluster in clusters:
+        limite_vendas = 1.0
+        df_filtrado = df[(df['Global_Sales'] > limite_vendas) & (df['Cluster'] == cluster)]
+        transacoes = df_filtrado.groupby(['Name', 'Genre'])['Platform'].apply(list).reset_index()
+        transacoes['transacao'] = transacoes['Platform'].apply(lambda x: ', '.join(x))
+        transacoes_df = transacoes['transacao'].str.get_dummies(sep=', ')
+        
+        frequent_itemsets = fpgrowth(transacoes_df, min_support=0.05, use_colnames=True)
+        regras = association_rules(frequent_itemsets, metric="lift", min_threshold=1)
+        todas_regras = pd.concat([todas_regras, regras], ignore_index=True)
+    
+    return todas_regras
 
-    plt.title(f'Mapa de calor: {linha} vs {coluna}')
-    plt.xlabel(linha)
-    plt.ylabel(coluna)
+# Interface do usuário
+st.title("Sistema de Tomada de Decisão para Jogos")
+st.header("Entrada de Dados")
+platform = st.selectbox("Plataforma", df['Platform'].unique())
+genre = st.selectbox("Gênero", df['Genre'].unique())
+publisher = st.selectbox("Distribuidora", df['Publisher'].unique())
 
-    return heatmap
+# Treinar o modelo de Random Forest
+rf, scaler, X = treinar_random_forest()
 
-def grafico_serie_historica(df, coluna, ano_inicial, ano_final):
-    df_filtrado = df[(df[coluna] >= ano_inicial) & (df[coluna] <= ano_final)]
-    plt.figure(figsize=(10, 5))
-    plt.plot(df_filtrado['Year'], df_filtrado[coluna], marker='o')
-    plt.title('Gráfico de Série Histórica')
-    plt.xlabel('Ano')
-    plt.ylabel(coluna)
-    plt.grid()
-    return plt
+# Botão para prever vendas
+if st.button("Prever Vendas"):
+    predicted_sales = prever_global_sales(rf, scaler, platform, genre, publisher)
+    st.write(f"Vendas Previstas: {predicted_sales:.2f}")
 
-def grafico_dispersao(df, coluna_x, coluna_y):
-    plt.figure(figsize=(10, 5))
-    plt.scatter(df[coluna_x], df[coluna_y], alpha=0.7)
-    plt.title('Gráfico de Dispersão')
-    plt.xlabel(coluna_x)
-    plt.ylabel(coluna_y)
-    plt.grid()
-    return plt
+# Aplicar FP-Growth
+todas_regras = aplicar_fp_growth()
 
+# Exibir regras de associação
+st.header("Regras de Associação")
+if st.button("Gerar Regras"):
+    melhor_recomendacao = todas_regras.sort_values(by='lift', ascending=False).head(1)
+    st.write(melhor_recomendacao)
 
+# Exportar resultados
+if st.button("Exportar Resultados"):
+    todas_regras.to_csv('regras_associacao.csv', index=False)
+    st.success("Resultados exportados com sucesso!")
