@@ -1,2 +1,2 @@
 import streamlit as st
-st.title = ('teste')
+st.title('Análise de Dados do Titanic')
