@@ -28,7 +28,7 @@ if uploaded_file is not None:
             ano_inicial, ano_final = st.select_slider("Selecione o período de anos", options=df['Year'].unique(), value=(df['Year'].min(), df['Year'].max()))
             df_filtrado = df[(df['Year'] >= ano_inicial) & (df['Year'] <= ano_final)]
             if st.button("Executar Gráfico de Série Histórica"):
-                st.line_chart(df_filtrado.set_index('Year')[colunas[0]])
+                st.line_chart(df_filtrado.set_index('Year')[colunas[0]])  
 
         # Gráfico de Dispersão
         colunas_numericas = df.select_dtypes(include=['int64', 'float64']).columns.tolist()
@@ -36,13 +36,20 @@ if uploaded_file is not None:
             coluna_x = st.selectbox("Selecione a coluna para o gráfico de dispersão (eixo X)", options=colunas_numericas)
             coluna_y = st.selectbox("Selecione a coluna para o gráfico de dispersão (eixo Y)", options=colunas_numericas)
             if st.button("Executar Gráfico de Dispersão"):
-                # Criar gráfico de dispersão usando Altair
-                chart = alt.Chart(df).mark_circle(size=60).encode(
-                    x=coluna_x,
-                    y=coluna_y,
-                    tooltip=[coluna_x, coluna_y]
-                ).interactive()
-                st.altair_chart(chart, use_container_width=True)
+                if 'Cluster' in df.columns:
+                    chart = alt.Chart(df).mark_circle(size=60).encode(
+                        x=coluna_x,
+                        y=coluna_y,
+                        color=alt.condition(
+                            alt.datum.Cluster == 0,
+                            alt.value('red'),
+                            alt.value('blue')
+                        ),
+                        tooltip=[coluna_x, coluna_y, 'Cluster']
+                    ).interactive()
+                    st.altair_chart(chart, use_container_width=True)
+                else:
+                    st.error("A coluna 'Cluster' não foi encontrada no DataFrame.")
 
     except Exception as e:
         st.error(f"Erro ao carregar o arquivo: {e}")  # Mensagem de erro
