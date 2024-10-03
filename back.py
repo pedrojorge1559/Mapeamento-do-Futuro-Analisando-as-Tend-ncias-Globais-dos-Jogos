@@ -2,11 +2,11 @@ import streamlit as st
 import pandas as pd
 import altair as alt
 import numpy as np
+import matplotlib.pyplot as plt
 from sklearn.neural_network import MLPRegressor
 from sklearn.tree import DecisionTreeRegressor
 from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import train_test_split, GridSearchCV
-import matplotlib.pyplot as plt
 
 # Carregando o arquivo CSV
 df = pd.read_csv('vgsales_com_clusters.csv')
@@ -50,127 +50,10 @@ if len(colunas_numericas) >= 2:
 else:
     st.error("O DataFrame deve conter pelo menos duas colunas numéricas para o gráfico de dispersão.")
 
-st.subheader("Simulação Empresarial")
-
-# Selecionando a empresa
-empresas = df['Publisher'].unique()
-empresa_selecionada = st.selectbox("Selecione a empresa", options=empresas)
-
-# Filtrando o DataFrame pela empresa selecionada
-df_empresa = df[df['Publisher'] == empresa_selecionada]
-
-# Selecionando o gênero (agora qualquer gênero)
-generos = df['Genre'].unique()
-genero_selecionado = st.selectbox("Selecione o gênero (pode ser novo)", options=generos)
-
-if st.button("Executar Simulação"):
-    if not df_empresa.empty:
-        # Preparando os dados para o modelo
-        df_genero_empresa = df_empresa[df_empresa['Genre'] == genero_selecionado]
-        df_genero_mercado = df[df['Genre'] == genero_selecionado]
-
-        # Se a empresa nunca lançou jogos nesse gênero
-        if df_genero_empresa.empty:
-            st.warning(f"A empresa '{empresa_selecionada}' nunca lançou jogos no gênero '{genero_selecionado}'.")
-            # Usar apenas dados do mercado geral
-            if not df_genero_mercado.empty:
-                X = df_genero_mercado[['Year', 'NA_Sales', 'EU_Sales', 'JP_Sales', 'Other_Sales']]
-                y = df_genero_mercado['Global_Sales']
-            else:
-                st.error(f"Nenhum jogo encontrado no gênero '{genero_selecionado}' no mercado.")
-                st.stop()
-        else:
-            X = df_genero_empresa[['Year', 'NA_Sales', 'EU_Sales', 'JP_Sales', 'Other_Sales']]
-            y = df_genero_empresa['Global_Sales']
-
-        # Verificando se há dados suficientes para dividir
-        if len(X) > 1:  # Deve haver pelo menos 2 amostras para dividir
-            # Dividindo os dados em treino e teste
-            X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
-
-            # Normalizando os dados
-            scaler = StandardScaler()
-            X_train_scaled = scaler.fit_transform(X_train)
-            X_test_scaled = scaler.transform(X_test)
-            
-            # Hiperparâmetros para RNA
-            param_grid_rna = {
-                'hidden_layer_sizes': [(100,), (100, 50), (50, 50)],
-                'max_iter': [500, 1000],
-            }
-            grid_search_rna = GridSearchCV(MLPRegressor(random_state=42), param_grid_rna, cv=5)
-            grid_search_rna.fit(X_train_scaled, y_train)
-            rna = grid_search_rna.best_estimator_
-
-            # Hiperparâmetros para Árvore de Decisão
-            param_grid_tree = {
-                'max_depth': [None, 10, 20, 30],
-                'min_samples_split': [2, 5, 10],
-            }
-            grid_search_tree = GridSearchCV(DecisionTreeRegressor(random_state=42), param_grid_tree, cv=5)
-            grid_search_tree.fit(X_train, y_train)
-            arvore = grid_search_tree.best_estimator_
-
-            # Fazendo previsões
-            previsoes_rna = rna.predict(X_test_scaled)
-            previsoes_arvore = arvore.predict(X_test)
-
-            # Calculando a média das previsões
-            media_previsao_rna = np.mean(previsoes_rna)
-            media_previsao_arvore = np.mean(previsoes_arvore)
-
-            st.success(f"Probabilidade de sucesso para o gênero '{genero_selecionado}' com a empresa '{empresa_selecionada}':")
-            st.write(f"RNA: {media_previsao_rna:.2f} vendas previstas")
-            st.write(f"Árvore de Decisão: {media_previsao_arvore:.2f} vendas previstas")
-
-            # Gráfico de vendas reais
-            plt.figure(figsize=(10, 5))
-            plt.plot(y_test.values, label='Vendas Reais', color='blue')
-            plt.plot(previsoes_rna, label='Previsões RNA', color='orange')
-            plt.plot(previsoes_arvore, label='Previsões Árvore de Decisão', color='green')
-            plt.legend()
-            plt.title('Comparação de Vendas Reais e Previsões')
-            plt.xlabel('Amostras do Conjunto de Teste')
-            plt.ylabel('Vendas')
-            st.pyplot(plt)
-
-            # Identificando o melhor mercado com base nas previsões
-            mercados = ['NA_Sales', 'EU_Sales', 'JP_Sales', 'Other_Sales']
-            vendas_previstas_rna = {mercado: np.sum(previsoes_rna) for mercado in mercados}
-            vendas_previstas_arvore = {mercado: np.sum(previsoes_arvore) for mercado in mercados}
-
-            melhor_mercado_rna = max(vendas_previstas_rna, key=vendas_previstas_rna.get)
-            melhor_mercado_arvore = max(vendas_previstas_arvore, key=vendas_previstas_arvore.get)
-
-            st.write(f"Melhor mercado com base nas previsões RNA: {melhor_mercado_rna} com vendas previstas de {vendas_previstas_rna[melhor_mercado_rna]:.2f}")
-            st.write(f"Melhor mercado com base nas previsões Árvore de Decisão: {melhor_mercado_arvore} com vendas previstas de {vendas_previstas_arvore[melhor_mercado_arvore]:.2f}")
-
-            # Análise de vendas do gênero no mercado geral
-            st.subheader(f"Análise de Vendas do Gênero '{genero_selecionado}' no Mercado Geral")
-
-            # Vendas regionais do gênero no mercado geral
-            vendas_regionais_mercado = df[df['Genre'] == genero_selecionado][['NA_Sales', 'EU_Sales', 'JP_Sales', 'Other_Sales']].sum().reset_index()
-            vendas_regionais_mercado.columns = ['Região', 'Total de Vendas']
-            bar_chart_regionais_mercado = alt.Chart(vendas_regionais_mercado).mark_bar().encode(
-                x='Região',
-                y='Total de Vendas',
-                color='Região'
-            ).properties(title='Total de Vendas por Região no Mercado Geral')
-            st.altair_chart(bar_chart_regionais_mercado, use_container_width=True)
-
-            # Vendas globais do gênero no mercado geral
-            vendas_globais_mercado = df[df['Genre'] == genero_selecionado]['Global_Sales'].sum()
-            st.write(f"Total de Vendas Globais para o gênero '{genero_selecionado}' no mercado: {vendas_globais_mercado:.2f}")
-
-        else:
-            st.error("Não há dados suficientes para realizar a simulação.")
-    else:
-        st.error(f"A empresa '{empresa_selecionada}' não possui jogos registrados.")
-
 st.subheader("Métricas da Empresa")
 
 # Vendas regionais
-vendas_regionais = df_empresa[['NA_Sales', 'EU_Sales', 'JP_Sales', 'Other_Sales']].sum().reset_index()
+vendas_regionais = df[['NA_Sales', 'EU_Sales', 'JP_Sales', 'Other_Sales']].sum().reset_index()
 vendas_regionais.columns = ['Região', 'Total de Vendas']
 bar_chart_regionais = alt.Chart(vendas_regionais).mark_bar().encode(
     x='Região',
@@ -180,7 +63,7 @@ bar_chart_regionais = alt.Chart(vendas_regionais).mark_bar().encode(
 st.altair_chart(bar_chart_regionais, use_container_width=True)
 
 # Gêneros mais vendidos
-genero_vendas = df_empresa.groupby('Genre')['Global_Sales'].sum().reset_index()
+genero_vendas = df.groupby('Genre')['Global_Sales'].sum().reset_index()
 genero_vendas = genero_vendas.sort_values(by='Global_Sales', ascending=False)
 bar_chart_generos = alt.Chart(genero_vendas).mark_bar().encode(
     x=alt.X('Genre', sort='-y'),
@@ -188,3 +71,167 @@ bar_chart_generos = alt.Chart(genero_vendas).mark_bar().encode(
     color='Genre'
 ).properties(title='Total de Vendas por Gênero')
 st.altair_chart(bar_chart_generos, use_container_width=True)
+
+# 1) Seleção da empresa
+empresas = df['Publisher'].unique()
+empresa_simulada = st.selectbox("Selecione a empresa", options=empresas)
+
+# 2) Seleção do gênero
+generos = df['Genre'].unique()
+genero_simulado = st.selectbox("Selecione o gênero", options=generos)
+
+# 3) Gráfico de barras da quantidade de jogos por gênero da empresa selecionada
+df_empresa = df[df['Publisher'] == empresa_simulada]
+jogos_por_genero = df_empresa['Genre'].value_counts().reset_index()
+jogos_por_genero.columns = ['Gênero', 'Quantidade']
+
+bar_chart_jogos = alt.Chart(jogos_por_genero).mark_bar().encode(
+    x=alt.X('Gênero', sort='-y'),
+    y='Quantidade',
+    color='Gênero'
+).properties(title='Quantidade de Jogos por Gênero da Empresa')
+st.altair_chart(bar_chart_jogos, use_container_width=True)
+
+# 4) Gráfico de vendas regionais por gênero
+vendas_regionais = df_empresa.groupby('Genre')[['NA_Sales', 'EU_Sales', 'JP_Sales', 'Other_Sales']].sum().reset_index()
+vendas_regionais = vendas_regionais[vendas_regionais['Genre'] == genero_simulado]
+
+if not vendas_regionais.empty:
+    vendas_regionais_melted = vendas_regionais.melt(id_vars='Genre', var_name='Região', value_name='Total de Vendas')
+    bar_chart_vendas_regionais = alt.Chart(vendas_regionais_melted).mark_bar().encode(
+        x='Região',
+        y='Total de Vendas',
+        color='Região'
+    ).properties(title=f'Total de Vendas Regionais para o Gênero "{genero_simulado}"')
+    st.altair_chart(bar_chart_vendas_regionais, use_container_width=True)
+else:
+    st.warning(f"A empresa '{empresa_simulada}' não possui vendas registradas para o gênero '{genero_simulado}'.")
+
+# 5) Gráfico de vendas globais por gênero
+vendas_globais = df_empresa.groupby('Genre')['Global_Sales'].sum().reset_index()
+vendas_globais = vendas_globais[vendas_globais['Genre'] == genero_simulado]
+
+if not vendas_globais.empty:
+    bar_chart_vendas_globais = alt.Chart(vendas_globais).mark_bar().encode(
+        x='Genre',
+        y='Global_Sales',
+        color='Genre'
+    ).properties(title=f'Total de Vendas Globais para o Gênero "{genero_simulado}"')
+    st.altair_chart(bar_chart_vendas_globais, use_container_width=True)
+else:
+    st.warning(f"A empresa '{empresa_simulada}' não possui vendas globais registradas para o gênero '{genero_simulado}'.")
+
+# 6) Algoritmo de RNA e Árvore de Decisão para a empresa simulada
+if not df_empresa[df_empresa['Genre'] == genero_simulado].empty:
+    df_genero_empresa = df_empresa[df_empresa['Genre'] == genero_simulado]
+    X = df_genero_empresa[['Year', 'NA_Sales', 'EU_Sales', 'JP_Sales', 'Other_Sales']]
+    y = df_genero_empresa['Global_Sales']
+
+    if len(X) > 1:
+        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+        # Normalizando os dados
+        scaler = StandardScaler()
+        X_train_scaled = scaler.fit_transform(X_train)
+        X_test_scaled = scaler.transform(X_test)
+
+        # Hiperparâmetros para RNA
+        param_grid_rna = {
+            'hidden_layer_sizes': [(100,), (100, 50), (50, 50)],
+            'max_iter': [500, 1000],
+        }
+        grid_search_rna = GridSearchCV(MLPRegressor(random_state=42), param_grid_rna, cv=5)
+        grid_search_rna.fit(X_train_scaled, y_train)
+        rna = grid_search_rna.best_estimator_
+
+        # Hiperparâmetros para Árvore de Decisão
+        param_grid_tree = {
+            'max_depth': [None, 10, 20, 30],
+            'min_samples_split': [2, 5, 10],
+        }
+        grid_search_tree = GridSearchCV(DecisionTreeRegressor(random_state=42), param_grid_tree, cv=5)
+        grid_search_tree.fit(X_train, y_train)
+        arvore = grid_search_tree.best_estimator_
+
+        # Fazendo previsões
+        previsoes_rna = rna.predict(X_test_scaled)
+        previsoes_arvore = arvore.predict(X_test)
+
+        # Gráfico de vendas reais
+        plt.figure(figsize=(10, 5))
+        plt.plot(y_test.values, label='Vendas Reais', color='blue')
+        plt.plot(previsoes_rna, label='Previsões RNA', color='orange')
+        plt.plot(previsoes_arvore, label='Previsões Árvore de Decisão', color='green')
+        plt.legend()
+        plt.title('Comparação de Vendas Reais e Previsões')
+        plt.xlabel('Amostras do Conjunto de Teste')
+        plt.ylabel('Vendas')
+        st.pyplot(plt)
+
+        # Identificando o melhor mercado com base nas previsões
+        mercados = ['NA_Sales', 'EU_Sales', 'JP_Sales', 'Other_Sales']
+        vendas_previstas_rna = {mercado: np.sum(previsoes_rna) for mercado in mercados}
+        vendas_previstas_arvore = {mercado: np.sum(previsoes_arvore) for mercado in mercados}
+
+        melhor_mercado_rna = max(vendas_previstas_rna, key=vendas_previstas_rna.get)
+        melhor_mercado_arvore = max(vendas_previstas_arvore, key=vendas_previstas_arvore.get)
+
+        st.write(f"Melhor mercado com base nas previsões RNA: {melhor_mercado_rna} com vendas previstas de {vendas_previstas_rna[melhor_mercado_rna]:.2f}")
+        st.write(f"Melhor mercado com base nas previsões Árvore de Decisão: {melhor_mercado_arvore} com vendas previstas de {vendas_previstas_arvore[melhor_mercado_arvore]:.2f}")
+    else:
+        st.error("Não há dados suficientes para realizar a simulação interna.")
+else:
+    st.warning(f"A empresa '{empresa_simulada}' nunca lançou jogos no gênero '{genero_simulado}'. Análise interna não pode ser realizada.")
+
+# 7) Algoritmo de RNA e Árvore de Decisão para o mercado geral
+df_genero_mercado = df[df['Genre'] == genero_simulado]
+if not df_genero_mercado.empty:
+    X_mercado = df_genero_mercado[['Year', 'NA_Sales', 'EU_Sales', 'JP_Sales', 'Other_Sales']]
+    y_mercado = df_genero_mercado['Global_Sales']
+
+    if len(X_mercado) > 1:
+        X_train_mercado, X_test_mercado, y_train_mercado, y_test_mercado = train_test_split(X_mercado, y_mercado, test_size=0.2, random_state=42)
+
+        # Normalizando os dados
+        scaler_mercado = StandardScaler()
+        X_train_scaled_mercado = scaler_mercado.fit_transform(X_train_mercado)
+        X_test_scaled_mercado = scaler_mercado.transform(X_test_mercado)
+
+        # Hiperparâmetros para RNA
+        grid_search_rna_mercado = GridSearchCV(MLPRegressor(random_state=42), param_grid_rna, cv=5)
+        grid_search_rna_mercado.fit(X_train_scaled_mercado, y_train_mercado)
+        rna_mercado = grid_search_rna_mercado.best_estimator_
+
+        # Hiperparâmetros para Árvore de Decisão
+        grid_search_tree_mercado = GridSearchCV(DecisionTreeRegressor(random_state=42), param_grid_tree, cv=5)
+        grid_search_tree_mercado.fit(X_train_mercado, y_train_mercado)
+        arvore_mercado = grid_search_tree_mercado.best_estimator_
+
+        # Fazendo previsões
+        previsoes_rna_mercado = rna_mercado.predict(X_test_scaled_mercado)
+        previsoes_arvore_mercado = arvore_mercado.predict(X_test_mercado)
+
+        # Gráfico de vendas reais
+        plt.figure(figsize=(10, 5))
+        plt.plot(y_test_mercado.values, label='Vendas Reais', color='blue')
+        plt.plot(previsoes_rna_mercado, label='Previsões RNA', color='orange')
+        plt.plot(previsoes_arvore_mercado, label='Previsões Árvore de Decisão', color='green')
+        plt.legend()
+        plt.title('Comparação de Vendas Reais e Previsões (Mercado Geral)')
+        plt.xlabel('Amostras do Conjunto de Teste')
+        plt.ylabel('Vendas')
+        st.pyplot(plt)
+
+        # Identificando o melhor mercado com base nas previsões
+        vendas_previstas_rna_mercado = {mercado: np.sum(previsoes_rna_mercado) for mercado in mercados}
+        vendas_previstas_arvore_mercado = {mercado: np.sum(previsoes_arvore_mercado) for mercado in mercados}
+
+        melhor_mercado_rna_mercado = max(vendas_previstas_rna_mercado, key=vendas_previstas_rna_mercado.get)
+        melhor_mercado_arvore_mercado = max(vendas_previstas_arvore_mercado, key=vendas_previstas_arvore_mercado.get)
+
+        st.write(f"Melhor mercado com base nas previsões RNA (Mercado Geral): {melhor_mercado_rna_mercado} com vendas previstas de {vendas_previstas_rna_mercado[melhor_mercado_rna_mercado]:.2f}")
+        st.write(f"Melhor mercado com base nas previsões Árvore de Decisão (Mercado Geral): {melhor_mercado_arvore_mercado} com vendas previstas de {vendas_previstas_arvore_mercado[melhor_mercado_arvore_mercado]:.2f}")
+    else:
+        st.error("Não há dados suficientes para realizar a simulação no mercado geral.")
+else:
+    st.warning(f"Nenhum jogo encontrado no gênero '{genero_simulado}' no mercado geral.")
