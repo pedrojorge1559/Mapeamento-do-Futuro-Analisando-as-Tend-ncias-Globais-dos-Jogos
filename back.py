@@ -208,6 +208,8 @@ if not df_genero_mercado.empty:
         plt.title('Comparação de Vendas Reais e Previsões (Mercado Geral)')
         plt.xlabel('Amostras do Conjunto de Teste')
         plt.ylabel('Vendas')
+        
+        # Exibindo o gráfico no Streamlit
         st.pyplot(plt)
 
         # Identificando o melhor mercado com base nas previsões
