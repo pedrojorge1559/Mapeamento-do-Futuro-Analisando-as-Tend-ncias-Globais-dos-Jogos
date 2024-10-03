@@ -53,14 +53,17 @@ else:
 st.subheader("Métricas da Empresa")
 
 # 1) Seleção da empresa
+st.subheader("Seleção da Empresa")
 empresas = df['Publisher'].unique()
 empresa_simulada = st.selectbox("Selecione a empresa", options=empresas)
 
 # 2) Seleção do gênero
+st.subheader("Seleção do Gênero")
 generos = df['Genre'].unique()
 genero_simulado = st.selectbox("Selecione o gênero", options=generos)
 
 # 3) Gráfico de barras da quantidade de jogos por gênero da empresa selecionada
+st.subheader("Gráfico de Barras da Quantidade de Jogos por Gênero da Empresa Selecionada")
 df_empresa = df[df['Publisher'] == empresa_simulada]
 jogos_por_genero = df_empresa['Genre'].value_counts().reset_index()
 jogos_por_genero.columns = ['Gênero', 'Quantidade']
@@ -73,6 +76,7 @@ bar_chart_jogos = alt.Chart(jogos_por_genero).mark_bar().encode(
 st.altair_chart(bar_chart_jogos, use_container_width=True)
 
 # 4) Gráfico de vendas regionais por gênero (agora puxando do dataframe inteiro)
+st.subheader("Gráfico de Vendas Regionais por Gênero")
 vendas_regionais = df.groupby('Genre')[['NA_Sales', 'EU_Sales', 'JP_Sales', 'Other_Sales']].sum().reset_index()
 vendas_regionais = vendas_regionais[vendas_regionais['Genre'] == genero_simulado]
 
@@ -102,6 +106,7 @@ else:
     st.warning(f"Nenhum jogo encontrado no gênero '{genero_simulado}' no mercado.")
 
 # 6) Algoritmo de RNA e Árvore de Decisão para a empresa simulada
+st.subheader("Algoritmo de RNA e Árvore de Decisão para a Empresa Simulada")
 if not df_empresa[df_empresa['Genre'] == genero_simulado].empty:
     df_genero_empresa = df_empresa[df_empresa['Genre'] == genero_simulado]
     X = df_genero_empresa[['Year', 'NA_Sales', 'EU_Sales', 'JP_Sales', 'Other_Sales']]
@@ -164,6 +169,7 @@ else:
     st.warning(f"A empresa '{empresa_simulada}' nunca lançou jogos no gênero '{genero_simulado}'. Análise interna não pode ser realizada.")
 
 # 7) Algoritmo de RNA e Árvore de Decisão para o mercado geral
+st.subheader("Algoritmo de RNA e Árvore de Decisão para o Mercado Geral")
 df_genero_mercado = df[df['Genre'] == genero_simulado]
 if not df_genero_mercado.empty:
     X_mercado = df_genero_mercado[['Year', 'NA_Sales', 'EU_Sales', 'JP_Sales', 'Other_Sales']]
