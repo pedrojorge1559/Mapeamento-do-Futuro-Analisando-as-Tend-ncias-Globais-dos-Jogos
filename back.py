@@ -52,26 +52,6 @@ else:
 
 st.subheader("Métricas da Empresa")
 
-# Vendas regionais
-vendas_regionais = df[['NA_Sales', 'EU_Sales', 'JP_Sales', 'Other_Sales']].sum().reset_index()
-vendas_regionais.columns = ['Região', 'Total de Vendas']
-bar_chart_regionais = alt.Chart(vendas_regionais).mark_bar().encode(
-    x='Região',
-    y='Total de Vendas',
-    color='Região'
-).properties(title='Total de Vendas por Região')
-st.altair_chart(bar_chart_regionais, use_container_width=True)
-
-# Gêneros mais vendidos
-genero_vendas = df.groupby('Genre')['Global_Sales'].sum().reset_index()
-genero_vendas = genero_vendas.sort_values(by='Global_Sales', ascending=False)
-bar_chart_generos = alt.Chart(genero_vendas).mark_bar().encode(
-    x=alt.X('Genre', sort='-y'),
-    y='Global_Sales',
-    color='Genre'
-).properties(title='Total de Vendas por Gênero')
-st.altair_chart(bar_chart_generos, use_container_width=True)
-
 # 1) Seleção da empresa
 empresas = df['Publisher'].unique()
 empresa_simulada = st.selectbox("Selecione a empresa", options=empresas)
@@ -92,8 +72,8 @@ bar_chart_jogos = alt.Chart(jogos_por_genero).mark_bar().encode(
 ).properties(title='Quantidade de Jogos por Gênero da Empresa')
 st.altair_chart(bar_chart_jogos, use_container_width=True)
 
-# 4) Gráfico de vendas regionais por gênero
-vendas_regionais = df_empresa.groupby('Genre')[['NA_Sales', 'EU_Sales', 'JP_Sales', 'Other_Sales']].sum().reset_index()
+# 4) Gráfico de vendas regionais por gênero (agora puxando do dataframe inteiro)
+vendas_regionais = df.groupby('Genre')[['NA_Sales', 'EU_Sales', 'JP_Sales', 'Other_Sales']].sum().reset_index()
 vendas_regionais = vendas_regionais[vendas_regionais['Genre'] == genero_simulado]
 
 if not vendas_regionais.empty:
@@ -105,10 +85,10 @@ if not vendas_regionais.empty:
     ).properties(title=f'Total de Vendas Regionais para o Gênero "{genero_simulado}"')
     st.altair_chart(bar_chart_vendas_regionais, use_container_width=True)
 else:
-    st.warning(f"A empresa '{empresa_simulada}' não possui vendas registradas para o gênero '{genero_simulado}'.")
+    st.warning(f"Nenhum jogo encontrado no gênero '{genero_simulado}' no mercado.")
 
 # 5) Gráfico de vendas globais por gênero
-vendas_globais = df_empresa.groupby('Genre')['Global_Sales'].sum().reset_index()
+vendas_globais = df.groupby('Genre')['Global_Sales'].sum().reset_index()
 vendas_globais = vendas_globais[vendas_globais['Genre'] == genero_simulado]
 
 if not vendas_globais.empty:
@@ -119,7 +99,7 @@ if not vendas_globais.empty:
     ).properties(title=f'Total de Vendas Globais para o Gênero "{genero_simulado}"')
     st.altair_chart(bar_chart_vendas_globais, use_container_width=True)
 else:
-    st.warning(f"A empresa '{empresa_simulada}' não possui vendas globais registradas para o gênero '{genero_simulado}'.")
+    st.warning(f"Nenhum jogo encontrado no gênero '{genero_simulado}' no mercado.")
 
 # 6) Algoritmo de RNA e Árvore de Decisão para a empresa simulada
 if not df_empresa[df_empresa['Genre'] == genero_simulado].empty:
