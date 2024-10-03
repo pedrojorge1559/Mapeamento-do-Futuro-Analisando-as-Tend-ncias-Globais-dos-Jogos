@@ -6,6 +6,7 @@ from sklearn.neural_network import MLPRegressor
 from sklearn.tree import DecisionTreeRegressor
 from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import train_test_split, GridSearchCV
+import matplotlib.pyplot as plt
 
 # Carregando o arquivo CSV
 df = pd.read_csv('vgsales_com_clusters.csv')
@@ -65,74 +66,86 @@ genero_selecionado = st.selectbox("Selecione o gênero (pode ser novo)", options
 if st.button("Executar Simulação"):
     if not df_empresa.empty:
         # Preparando os dados para o modelo
-        df_genero = df_empresa[df_empresa['Genre'] == genero_selecionado]
-        
-        # Se não houver jogos para o gênero selecionado, use todos os dados da empresa
-        if df_genero.empty:
-            df_genero = df_empresa
-        
-        X = df_genero[['Year', 'NA_Sales', 'EU_Sales', 'JP_Sales', 'Other_Sales']]
-        y = df_genero['Global_Sales']
-        
-        # Dividindo os dados em treino e teste
-        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+        df_genero_empresa = df_empresa[df_empresa['Genre'] == genero_selecionado]
+        df_genero_mercado = df[df['Genre'] == genero_selecionado]
 
-        # Normalizando os dados
-        scaler = StandardScaler()
-        X_train_scaled = scaler.fit_transform(X_train)
-        X_test_scaled = scaler.transform(X_test)
-        
-        # Hiperparâmetros para RNA
-        param_grid_rna = {
-            'hidden_layer_sizes': [(100,), (100, 50), (50, 50)],
-            'max_iter': [500, 1000],
-        }
-        grid_search_rna = GridSearchCV(MLPRegressor(random_state=42), param_grid_rna, cv=5)
-        grid_search_rna.fit(X_train_scaled, y_train)
-        rna = grid_search_rna.best_estimator_
+        # Se a empresa nunca lançou jogos nesse gênero
+        if df_genero_empresa.empty:
+            st.warning(f"A empresa '{empresa_selecionada}' nunca lançou jogos no gênero '{genero_selecionado}'.")
+            # Usar apenas dados do mercado geral
+            if not df_genero_mercado.empty:
+                X = df_genero_mercado[['Year', 'NA_Sales', 'EU_Sales', 'JP_Sales', 'Other_Sales']]
+                y = df_genero_mercado['Global_Sales']
+            else:
+                st.error(f"Nenhum jogo encontrado no gênero '{genero_selecionado}' no mercado.")
+            st.stop()
+        else:
+            X = df_genero_empresa[['Year', 'NA_Sales', 'EU_Sales', 'JP_Sales', 'Other_Sales']]
+            y = df_genero_empresa['Global_Sales']
 
-        # Hiperparâmetros para Árvore de Decisão
-        param_grid_tree = {
-            'max_depth': [None, 10, 20, 30],
-            'min_samples_split': [2, 5, 10],
-        }
-        grid_search_tree = GridSearchCV(DecisionTreeRegressor(random_state=42), param_grid_tree, cv=5)
-        grid_search_tree.fit(X_train, y_train)
-        arvore = grid_search_tree.best_estimator_
+        # Verificando se há dados suficientes para dividir
+        if len(X) > 1:  # Deve haver pelo menos 2 amostras para dividir
+            # Dividindo os dados em treino e teste
+            X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
-        # Fazendo previsões
-        previsoes_rna = rna.predict(X_test_scaled)
-        previsoes_arvore = arvore.predict(X_test)
+            # Normalizando os dados
+            scaler = StandardScaler()
+            X_train_scaled = scaler.fit_transform(X_train)
+            X_test_scaled = scaler.transform(X_test)
+            
+            # Hiperparâmetros para RNA
+            param_grid_rna = {
+                'hidden_layer_sizes': [(100,), (100, 50), (50, 50)],
+                'max_iter': [500, 1000],
+            }
+            grid_search_rna = GridSearchCV(MLPRegressor(random_state=42), param_grid_rna, cv=5)
+            grid_search_rna.fit(X_train_scaled, y_train)
+            rna = grid_search_rna.best_estimator_
 
-        # Calculando a média das previsões
-        media_previsao_rna = np.mean(previsoes_rna)
-        media_previsao_arvore = np.mean(previsoes_arvore)
+            # Hiperparâmetros para Árvore de Decisão
+            param_grid_tree = {
+                'max_depth': [None, 10, 20, 30],
+                'min_samples_split': [2, 5, 10],
+            }
+            grid_search_tree = GridSearchCV(DecisionTreeRegressor(random_state=42), param_grid_tree, cv=5)
+            grid_search_tree.fit(X_train, y_train)
+            arvore = grid_search_tree.best_estimator_
 
-        st.success(f"Probabilidade de sucesso para o gênero '{genero_selecionado}' com a empresa '{empresa_selecionada}':")
-        st.write(f"RNA: {media_previsao_rna:.2f} vendas previstas")
-        st.write(f"Árvore de Decisão: {media_previsao_arvore:.2f} vendas previstas")
+            # Fazendo previsões
+            previsoes_rna = rna.predict(X_test_scaled)
+            previsoes_arvore = arvore.predict(X_test)
 
-        # Gráfico de vendas reais
-        plt.figure(figsize=(10, 5))
-        plt.plot(y_test.values, label='Vendas Reais', color='blue')
-        plt.plot(previsoes_rna, label='Previsões RNA', color='orange')
-        plt.plot(previsoes_arvore, label='Previsões Árvore de Decisão', color='green')
-        plt.legend()
-        plt.title('Comparação de Vendas Reais e Previsões')
-        plt.xlabel('Amostras do Conjunto de Teste')
-        plt.ylabel('Vendas')
-        st.pyplot(plt)
+            # Calculando a média das previsões
+            media_previsao_rna = np.mean(previsoes_rna)
+            media_previsao_arvore = np.mean(previsoes_arvore)
 
-        # Identificando o melhor mercado com base nas previsões
-        mercados = ['NA_Sales', 'EU_Sales', 'JP_Sales', 'Other_Sales']
-        vendas_previstas_rna = {mercado: np.sum(previsoes_rna) for mercado in mercados}
-        vendas_previstas_arvore = {mercado: np.sum(previsoes_arvore) for mercado in mercados}
+            st.success(f"Probabilidade de sucesso para o gênero '{genero_selecionado}' com a empresa '{empresa_selecionada}':")
+            st.write(f"RNA: {media_previsao_rna:.2f} vendas previstas")
+            st.write(f"Árvore de Decisão: {media_previsao_arvore:.2f} vendas previstas")
 
-        melhor_mercado_rna = max(vendas_previstas_rna, key=vendas_previstas_rna.get)
-        melhor_mercado_arvore = max(vendas_previstas_arvore, key=vendas_previstas_arvore.get)
+            # Gráfico de vendas reais
+            plt.figure(figsize=(10, 5))
+            plt.plot(y_test.values, label='Vendas Reais', color='blue')
+            plt.plot(previsoes_rna, label='Previsões RNA', color='orange')
+            plt.plot(previsoes_arvore, label='Previsões Árvore de Decisão', color='green')
+            plt.legend()
+            plt.title('Comparação de Vendas Reais e Previsões')
+            plt.xlabel('Amostras do Conjunto de Teste')
+            plt.ylabel('Vendas')
+            st.pyplot(plt)
 
-        st.write(f"Melhor mercado com base nas previsões RNA: {melhor_mercado_rna} com vendas previstas de {vendas_previstas_rna[melhor_mercado_rna]:.2f}")
-        st.write(f"Melhor mercado com base nas previsões Árvore de Decisão: {melhor_mercado_arvore} com vendas previstas de {vendas_previstas_arvore[melhor_mercado_arvore]:.2f}")
+            # Identificando o melhor mercado com base nas previsões
+            mercados = ['NA_Sales', 'EU_Sales', 'JP_Sales', 'Other_Sales']
+            vendas_previstas_rna = {mercado: np.sum(previsoes_rna) for mercado in mercados}
+            vendas_previstas_arvore = {mercado: np.sum(previsoes_arvore) for mercado in mercados}
+
+            melhor_mercado_rna = max(vendas_previstas_rna, key=vendas_previstas_rna.get)
+            melhor_mercado_arvore = max(vendas_previstas_arvore, key=vendas_previstas_arvore.get)
+
+            st.write(f"Melhor mercado com base nas previsões RNA: {melhor_mercado_rna} com vendas previstas de {vendas_previstas_rna[melhor_mercado_rna]:.2f}")
+            st.write(f"Melhor mercado com base nas previsões Árvore de Decisão: {melhor_mercado_arvore} com vendas previstas de {vendas_previstas_arvore[melhor_mercado_arvore]:.2f}")
+        else:
+            st.error("Não há dados suficientes para realizar a simulação.")
     else:
         st.error(f"A empresa '{empresa_selecionada}' não possui jogos registrados.")
 
