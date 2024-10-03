@@ -178,11 +178,19 @@ if not df_genero_mercado.empty:
         X_test_scaled_mercado = scaler_mercado.transform(X_test_mercado)
 
         # Hiperparâmetros para RNA
+        param_grid_rna = {
+            'hidden_layer_sizes': [(100,), (100, 50), (50, 50)],
+            'max_iter': [500, 1000],
+        }
         grid_search_rna_mercado = GridSearchCV(MLPRegressor(random_state=42), param_grid_rna, cv=5)
         grid_search_rna_mercado.fit(X_train_scaled_mercado, y_train_mercado)
         rna_mercado = grid_search_rna_mercado.best_estimator_
 
         # Hiperparâmetros para Árvore de Decisão
+        param_grid_tree = {
+            'max_depth': [None, 10, 20, 30],
+            'min_samples_split': [2, 5, 10],
+        }
         grid_search_tree_mercado = GridSearchCV(DecisionTreeRegressor(random_state=42), param_grid_tree, cv=5)
         grid_search_tree_mercado.fit(X_train_mercado, y_train_mercado)
         arvore_mercado = grid_search_tree_mercado.best_estimator_
@@ -203,6 +211,7 @@ if not df_genero_mercado.empty:
         st.pyplot(plt)
 
         # Identificando o melhor mercado com base nas previsões
+        mercados = ['NA_Sales', 'EU_Sales', 'JP_Sales', 'Other_Sales']
         vendas_previstas_rna_mercado = {mercado: np.sum(previsoes_rna_mercado) for mercado in mercados}
         vendas_previstas_arvore_mercado = {mercado: np.sum(previsoes_arvore_mercado) for mercado in mercados}
 
