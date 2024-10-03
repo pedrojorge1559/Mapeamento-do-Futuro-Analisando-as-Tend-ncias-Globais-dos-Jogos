@@ -78,7 +78,7 @@ if st.button("Executar Simulação"):
                 y = df_genero_mercado['Global_Sales']
             else:
                 st.error(f"Nenhum jogo encontrado no gênero '{genero_selecionado}' no mercado.")
-            st.stop()
+                st.stop()
         else:
             X = df_genero_empresa[['Year', 'NA_Sales', 'EU_Sales', 'JP_Sales', 'Other_Sales']]
             y = df_genero_empresa['Global_Sales']
@@ -144,6 +144,24 @@ if st.button("Executar Simulação"):
 
             st.write(f"Melhor mercado com base nas previsões RNA: {melhor_mercado_rna} com vendas previstas de {vendas_previstas_rna[melhor_mercado_rna]:.2f}")
             st.write(f"Melhor mercado com base nas previsões Árvore de Decisão: {melhor_mercado_arvore} com vendas previstas de {vendas_previstas_arvore[melhor_mercado_arvore]:.2f}")
+
+            # Análise de vendas do gênero no mercado geral
+            st.subheader(f"Análise de Vendas do Gênero '{genero_selecionado}' no Mercado Geral")
+
+            # Vendas regionais do gênero no mercado geral
+            vendas_regionais_mercado = df[df['Genre'] == genero_selecionado][['NA_Sales', 'EU_Sales', 'JP_Sales', 'Other_Sales']].sum().reset_index()
+            vendas_regionais_mercado.columns = ['Região', 'Total de Vendas']
+            bar_chart_regionais_mercado = alt.Chart(vendas_regionais_mercado).mark_bar().encode(
+                x='Região',
+                y='Total de Vendas',
+                color='Região'
+            ).properties(title='Total de Vendas por Região no Mercado Geral')
+            st.altair_chart(bar_chart_regionais_mercado, use_container_width=True)
+
+            # Vendas globais do gênero no mercado geral
+            vendas_globais_mercado = df[df['Genre'] == genero_selecionado]['Global_Sales'].sum()
+            st.write(f"Total de Vendas Globais para o gênero '{genero_selecionado}' no mercado: {vendas_globais_mercado:.2f}")
+
         else:
             st.error("Não há dados suficientes para realizar a simulação.")
     else:
